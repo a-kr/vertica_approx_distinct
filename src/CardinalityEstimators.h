@@ -1,8 +1,22 @@
-#ifndef _LINEAR_PROB_COUNTER_H
-#define _LINEAR_PROB_COUNTER_H
+#ifndef _CARDINALITY_ESTIMATORS_H
+#define _CARDINALITY_ESTIMATORS_H
 
 #include <vector>
 #include <stdint.h>
+#include <string>
+
+class ICardinalityEstimator {
+    public:
+        virtual ~ICardinalityEstimator() {}
+        virtual void increment(char *key) = 0;
+        virtual int count() = 0;
+        virtual std::string repr() = 0;
+};
+
+class HashingCardinalityEstimator: public ICardinalityEstimator {
+    protected:
+        uint64_t hash(char *key);
+};
 
 
 /*
@@ -12,17 +26,17 @@
  * Based on https://gist.github.com/devdazed/3873524
  *
  */
-class LinearProbabilisticCounter {
+class LinearProbabilisticCounter: public HashingCardinalityEstimator {
     protected:
         std::vector<bool> _bitset;
         int size_in_bits;
+        int count_set_bits();
     public:
         /* size: number of bits in bitset. Should be on the order of couple millions. The more, the greater counting precision you get */
         LinearProbabilisticCounter(int size);
-        void increment(char *key);
-        int count_set_bits();
-        uint64_t hash(char *key);
-        int count();
+        virtual void increment(char *key);
+        virtual int count();
+        virtual std::string repr();
 };
 
 #endif

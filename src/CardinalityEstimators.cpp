@@ -3,21 +3,25 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <cstdio>
 #include <stdint.h>
 
 #include "MurmurHash3.h"
 #include "CardinalityEstimators.h"
 
+/******** HashingCardinalityEstimator ********/
 
-LinearProbabilisticCounter::LinearProbabilisticCounter(int size): _bitset(size, false) {
-    this->size_in_bits = size;
-}
-
-uint64_t LinearProbabilisticCounter::hash(char *key) {
+uint64_t HashingCardinalityEstimator::hash(char *key) {
     int key_len = strlen(key);
     uint64_t h[2];
     MurmurHash3_x64_128(key, key_len, 0, &h[0]);
     return h[0];
+}
+
+/******* LinearProbabilisticCounter ********/
+
+LinearProbabilisticCounter::LinearProbabilisticCounter(int size): _bitset(size, false) {
+    this->size_in_bits = size;
 }
 
 void LinearProbabilisticCounter::increment(char *key) {
@@ -42,4 +46,10 @@ int LinearProbabilisticCounter::count() {
     }
     double ratio = double(unset_bits) / double(this->size_in_bits);
     return -this->size_in_bits * log(ratio);
+}
+
+std::string LinearProbabilisticCounter::repr() {
+    char buf[50];
+    sprintf(buf, "LinearProbabilisticCounter(n=%d)", this->size_in_bits);
+    return std::string(buf);
 }
