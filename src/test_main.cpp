@@ -8,9 +8,13 @@ void test(int n_elements) {
     int i, c;
     std::vector<ICardinalityEstimator*> counters;
 
+    counters.push_back(new LinearProbabilisticCounter(16 * 1024 * 8));
     counters.push_back(new LinearProbabilisticCounter(256 * 1024 * 8));
-    counters.push_back(new LinearProbabilisticCounter(1 * 1024 * 1024 * 8));
+    //counters.push_back(new LinearProbabilisticCounter(1 * 1024 * 1024 * 8));
     counters.push_back(new LinearProbabilisticCounter(4 * 1024 * 1024 * 8));
+    counters.push_back(new KMinValuesCounter(128));
+    counters.push_back(new KMinValuesCounter(256));
+    counters.push_back(new KMinValuesCounter(1024));
 
     printf("Testing with %d elements...\n", n_elements);
 
