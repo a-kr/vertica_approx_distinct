@@ -53,7 +53,7 @@ class MinHeapComparator {
  */
 class KMinValuesCounter: public HashingCardinalityEstimator {
     protected:
-        std::vector<uint64_t> _minimal_values; /* a min heap */
+        std::vector<uint64_t> _minimal_values;
         int _max_of_min_i;
         int _values_stored;
         uint64_t _max_of_min;
@@ -62,6 +62,27 @@ class KMinValuesCounter: public HashingCardinalityEstimator {
     public:
         /* k: number of minimal values to store. On the order of couple hundred. The more, the greater counting precision you get */
         KMinValuesCounter(int k);
+        virtual void increment(char *key);
+        virtual int count();
+        virtual std::string repr();
+};
+
+/* HyperLogLog estimator
+ *
+ * Based on https://github.com/JonJanzen/hyperloglog/blob/master/hyperloglog/hll.py
+ * and http://blog.aggregateknowledge.com/2012/10/25/sketch-of-the-day-hyperloglog-cornerstone-of-a-big-data-infrastructure/
+ */
+class HyperLogLogCounter: public HashingCardinalityEstimator {
+    protected:
+        std::vector<int> buckets;
+        int b;
+        int m;
+        int m_mask;
+        double get_alpha();
+        int number_of_zero_buckets();
+    public:
+        /* k: number of bits to use as bucket key. In the range of 4..16. The more, the greater counting precision you get */
+        HyperLogLogCounter(int b);
         virtual void increment(char *key);
         virtual int count();
         virtual std::string repr();

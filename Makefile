@@ -51,7 +51,7 @@ $(BUILD_DIR)/AggregateFunctions.so: $(FUNC_LIB_SOURCES) $(SDK_HOME)/include/Vert
 TEST_MAIN_SOURCES=src/test_main.cpp src/MurmurHash3.cpp src/CardinalityEstimators.cpp
 
 test_main: $(TEST_MAIN_SOURCES)
-	$(CXX) -O3 -Wall -Werror -o $@ $(TEST_MAIN_SOURCES)
+	$(CXX) -g -Wall -Werror -o $@ $(TEST_MAIN_SOURCES)
 
 
 clean:
