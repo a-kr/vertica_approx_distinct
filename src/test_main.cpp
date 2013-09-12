@@ -1,6 +1,6 @@
 #include <cstdlib>
 #include <cstdio>
-#include "LinearProbCounter.h"
+#include "CardinalityEstimators.h"
 
 
 int main(int argc, char **argv) {

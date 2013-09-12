@@ -9,7 +9,7 @@
 #include <sstream>
 #include <vector>
 #include <iostream>
-#include "LinearProbCounter.h"
+#include "CardinalityEstimators.h"
 
 using namespace Vertica;
 using namespace std;

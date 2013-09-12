@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 #include "MurmurHash3.h"
-#include "LinearProbCounter.h"
+#include "CardinalityEstimators.h"
 
 
 LinearProbabilisticCounter::LinearProbabilisticCounter(int size): _bitset(size, false) {
