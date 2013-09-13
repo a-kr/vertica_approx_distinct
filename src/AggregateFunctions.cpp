@@ -15,7 +15,8 @@ using namespace Vertica;
 using namespace std;
 
 #define VARBINARY_MAX 65000
-#define HLL_BITS 12
+#define V_32K_AND_A_BIT 33000
+#define HLL_BITS 13
 #define LPC_BITS (63 * 1024 * 8)
 #define ESTIMATOR_ARG HLL_BITS
 #define EstimatorClass HyperLogLogOwnArrayCounter
@@ -55,8 +56,9 @@ class EstimateCountDistinct : public AggregateFunction
             srvInterface.log("aggregate init");
             vint &estimator_arg = aggs.getIntRef(0);
             estimator_arg = ESTIMATOR_ARG;
-            aggs.getStringRef(1).copy(std::string((size_t)VARBINARY_MAX, '\0'));
-            EstimatorClass counter(estimator_arg, aggs.getStringRef(1).data());
+            aggs.getStringRef(1).copy(std::string((size_t)V_32K_AND_A_BIT, '\0'));
+            aggs.getStringRef(2).copy(std::string((size_t)V_32K_AND_A_BIT, '\0'));
+            EstimatorClass counter(estimator_arg, aggs.getStringRef(1).data(), aggs.getStringRef(2).data());
             //aggs.getStringRef(2).copy(std::string((size_t)VARBINARY_MAX, ' '));
             //aggs.getStringRef(3).copy(std::string((size_t)VARBINARY_MAX, ' '));
             //this->serialize_counter(&counter, aggs);
@@ -73,7 +75,8 @@ class EstimateCountDistinct : public AggregateFunction
         try {
             vint estimator_arg = aggs.getIntRef(0);
             //EstimatorClass counter(estimator_arg);
-            EstimatorClass counter(estimator_arg, aggs.getStringRef(1).data());
+            //EstimatorClass counter(estimator_arg, aggs.getStringRef(1).data());
+            EstimatorClass counter(estimator_arg, aggs.getStringRef(1).data(), aggs.getStringRef(2).data());
             //this->unserialize_counter(&counter, aggs);
 
             do {
@@ -94,13 +97,15 @@ class EstimateCountDistinct : public AggregateFunction
     {
         try {
             vint estimator_arg = aggs.getIntRef(0);
-            EstimatorClass counter(estimator_arg, aggs.getStringRef(1).data());
+            //EstimatorClass counter(estimator_arg, aggs.getStringRef(1).data());
+            EstimatorClass counter(estimator_arg, aggs.getStringRef(1).data(), aggs.getStringRef(2).data());
             //EstimatorClass counter(estimator_arg);
             //this->unserialize_counter(&counter, aggs);
 
             do {
                 //EstimatorClass other_counter(estimator_arg);
-                EstimatorClass other_counter(estimator_arg, (char *)aggsOther.getStringRef(1).data());
+                //EstimatorClass other_counter(estimator_arg, (char *)aggsOther.getStringRef(1).data());
+                EstimatorClass other_counter(estimator_arg, (char *)aggsOther.getStringRef(1).data(), (char *)aggsOther.getStringRef(2).data());
                 //this->unserialize_counter(&other_counter, aggsOther);
                 counter.merge_from(&other_counter);
             } while (aggsOther.next());
@@ -118,7 +123,8 @@ class EstimateCountDistinct : public AggregateFunction
     {
         try {
             vint estimator_arg = aggs.getIntRef(0);
-            EstimatorClass counter(estimator_arg, aggs.getStringRef(1).data());
+            //EstimatorClass counter(estimator_arg, aggs.getStringRef(1).data());
+            EstimatorClass counter(estimator_arg, (char *)aggs.getStringRef(1).data(), (char *)aggs.getStringRef(2).data());
             //EstimatorClass counter(estimator_arg);
             //this->unserialize_counter(&counter, aggs);
 
@@ -139,8 +145,8 @@ class EstimateCountDistinctFactory : public AggregateFunctionFactory
     virtual void getIntermediateTypes(ServerInterface &srvInterface, const SizedColumnTypes &inputTypes, SizedColumnTypes &intermediateTypeMetaData)
     {
         intermediateTypeMetaData.addInt("b");
-        intermediateTypeMetaData.addVarbinary(VARBINARY_MAX, "storage0");
-        //intermediateTypeMetaData.addVarbinary(VARBINARY_MAX, "storage1");
+        intermediateTypeMetaData.addVarbinary(V_32K_AND_A_BIT, "storage0");
+        intermediateTypeMetaData.addVarbinary(V_32K_AND_A_BIT, "storage1");
         //intermediateTypeMetaData.addVarbinary(VARBINARY_MAX, "storage2");
     }
 

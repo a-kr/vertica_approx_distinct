@@ -384,27 +384,30 @@ void HyperLogLogCounter::unserialize(Serializer *serializer) {
 
 /******* HyperLogLogOwnArrayCounter ********/
 
-HyperLogLogOwnArrayCounter::HyperLogLogOwnArrayCounter(int b, char *storage_region) {
+HyperLogLogOwnArrayCounter::HyperLogLogOwnArrayCounter(int b, char *storage0, char *storage1) {
     this->own_buckets_memory = false;
     this->b = b;
     this->m = int(pow(2, constrain_int(b, 4, HYPER_LOG_LOG_B_MAX)));
     this->m_mask = this->m - 1; // 'b' ones
 
-    if (storage_region) {
-        this->buckets = (uint32_t *)storage_region;
+    if (storage0 && storage1) {
+        this->buckets[0] = (uint32_t *)storage0;
+        this->buckets[1] = (uint32_t *)storage1;
     } else {
-        this->buckets = new uint32_t[this->m];
+        this->buckets[0] = new uint32_t[this->m/2];
+        this->buckets[1] = new uint32_t[this->m/2];
         this->own_buckets_memory = true;
-        for (int i = 0; i < this->m; i++) {
-            this->buckets[i] = 0;
+        for (int i = 0; i < this->m/2; i++) {
+            this->buckets[0][i] = 0;
+            this->buckets[1][i] = 0;
         }
     }
 }
 
 HyperLogLogOwnArrayCounter::~HyperLogLogOwnArrayCounter() {
     if (this->own_buckets_memory) {
-        delete this->buckets;
-        this->buckets = NULL;
+        delete this->buckets[0];
+        delete this->buckets[1];
     }
 }
 
@@ -424,9 +427,12 @@ void HyperLogLogOwnArrayCounter::increment(const char *key, int len) {
     }
     uint64_t h = this->hash(key, len);
     int j = h & this->m_mask;
+    int j_bucket = j & 1;
+    j = j >> 1;
     uint64_t w = h >> this->b;
     uint32_t run_of_ones = (uint32_t)count_run_of_ones(w);
-    this->buckets[j] = (run_of_ones > this->buckets[j]) ? run_of_ones : this->buckets[j];
+    uint32_t old_value = this->buckets[j_bucket][j];
+    this->buckets[j_bucket][j] = (run_of_ones > old_value) ? run_of_ones : old_value;
 }
 
 int HyperLogLogOwnArrayCounter::count() {
@@ -434,8 +440,9 @@ int HyperLogLogOwnArrayCounter::count() {
     double estimate = this->get_alpha() * this->m * this->m;
     double sum = 0.0;
     int i;
-    for (i = 0; i < this->m; i++) {
-        sum += pow(2, -(double)this->buckets[i]);
+    for (i = 0; i < this->m/2; i++) {
+        sum += pow(2, -(double)this->buckets[0][i]);
+        sum += pow(2, -(double)this->buckets[1][i]);
     }
     estimate = estimate * 1.0 / sum;
 
@@ -455,8 +462,11 @@ int HyperLogLogOwnArrayCounter::count() {
 
 int HyperLogLogOwnArrayCounter::number_of_zero_buckets() {
     int i, count = 0;
-    for (i = 0; i < this->m; i++) {
-        if (this->buckets[i] == 0) {
+    for (i = 0; i < this->m/2; i++) {
+        if (this->buckets[0][i] == 0) {
+            count++;
+        }
+        if (this->buckets[1][i] == 0) {
             count++;
         }
     }
@@ -465,7 +475,7 @@ int HyperLogLogOwnArrayCounter::number_of_zero_buckets() {
 
 std::string HyperLogLogOwnArrayCounter::repr() {
     char buf[100];
-    int memory = sizeof(this->buckets[0]) * this->m;
+    int memory = sizeof(this->buckets[0][0]) * this->m;
     sprintf(buf, "HyperLogLogOwnArrayCounter(b=%d, m=%d, %s bytes)", this->b, this->m, human_readable_size(memory).c_str());
     return std::string(buf);
 }
@@ -476,23 +486,28 @@ void HyperLogLogOwnArrayCounter::merge_from(ICardinalityEstimator *that) {
         throw std::runtime_error("cannot merge HyperLogLogOwnArrayCounter with different parameters");
     }
     int i;
-    for (i = 0; i < this->m; i++) {
-        uint32_t my_v = this->buckets[i];
-        uint32_t his_v = other->buckets[i];
-        this->buckets[i] = (my_v > his_v) ? my_v : his_v;
+    for (i = 0; i < this->m/2; i++) {
+        uint32_t my_v = this->buckets[0][i];
+        uint32_t his_v = other->buckets[0][i];
+        this->buckets[0][i] = (my_v > his_v) ? my_v : his_v;
+
+        my_v = this->buckets[1][i];
+        his_v = other->buckets[1][i];
+        this->buckets[1][i] = (my_v > his_v) ? my_v : his_v;
     }
 }
 
 ICardinalityEstimator* HyperLogLogOwnArrayCounter::clone() {
-    return new HyperLogLogOwnArrayCounter(this->b, NULL);
+    return new HyperLogLogOwnArrayCounter(this->b, NULL, NULL);
 }
 
 void HyperLogLogOwnArrayCounter::serialize(Serializer *serializer) {
     serializer->write_int(this->b);
     serializer->write_int(this->m);
     serializer->write_int(this->m_mask);
-    for (int i = 0; i < this->m; i++) {
-        serializer->write_uint32_t(this->buckets[i]);
+    for (int i = 0; i < this->m/2; i++) {
+        serializer->write_uint32_t(this->buckets[0][i]);
+        serializer->write_uint32_t(this->buckets[1][i]);
     }
 }
 
@@ -501,9 +516,11 @@ void HyperLogLogOwnArrayCounter::unserialize(Serializer *serializer) {
     this->m = serializer->read_int();
     this->m_mask = serializer->read_int();
     //this->buckets.resize(this->m);
-    for (int i = 0; i < this->m; i++) {
+    for (int i = 0; i < this->m/2; i++) {
         uint32_t v = serializer->read_uint32_t();
-        this->buckets[i] = v;
+        this->buckets[0][i] = v;
+        v = serializer->read_uint32_t();
+        this->buckets[1][i] = v;
     }
 }
 

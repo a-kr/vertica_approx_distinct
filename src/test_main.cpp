@@ -96,7 +96,7 @@ void benchmark() {
     counters.push_back(new LinearProbabilisticCounter(128 * 1024 * 8));
     counters.push_back(new KMinValuesCounter(16 * 1024));
     counters.push_back(new HyperLogLogCounter(15));
-    counters.push_back(new HyperLogLogOwnArrayCounter(15, NULL));
+    counters.push_back(new HyperLogLogOwnArrayCounter(15, NULL, NULL));
     counters.push_back(new DummyCounter(0));
 
     printf("Testing with %d elements...\n", n_elements);

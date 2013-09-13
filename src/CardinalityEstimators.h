@@ -98,7 +98,7 @@ class HyperLogLogCounter: public HashingCardinalityEstimator {
 
 class HyperLogLogOwnArrayCounter: public HashingCardinalityEstimator {
     protected:
-        uint32_t *buckets;
+        uint32_t *buckets[2];
         bool own_buckets_memory;
         int b;
         int m;
@@ -107,7 +107,7 @@ class HyperLogLogOwnArrayCounter: public HashingCardinalityEstimator {
         int number_of_zero_buckets();
     public:
         /* k: number of bits to use as bucket key. In the range of 4..16. The more, the greater counting precision you get */
-        HyperLogLogOwnArrayCounter(int b, char *storage_region);
+        HyperLogLogOwnArrayCounter(int b, char *storage_region1, char *storage_region2);
         virtual ~HyperLogLogOwnArrayCounter();
         virtual void increment(const char *key, int len=-1);
         virtual int count();
