@@ -80,14 +80,23 @@ uint64_t HashingCardinalityEstimator::hash(const char *key) {
     return h[0];
 }
 
+uint64_t HashingCardinalityEstimator::hash(const char *key, int key_len) {
+    uint64_t h[2];
+    MurmurHash3_x64_128(key, key_len, 0, &h[0]);
+    return h[0];
+}
+
 /******* LinearProbabilisticCounter ********/
 
 LinearProbabilisticCounter::LinearProbabilisticCounter(int size): _bitset(size, false) {
     this->size_in_bits = size;
 }
 
-void LinearProbabilisticCounter::increment(const char *key) {
-    uint64_t h = this->hash(key);
+void LinearProbabilisticCounter::increment(const char *key, int len) {
+    if (len == -1) {
+        len = strlen(key);
+    }
+    uint64_t h = this->hash(key, len);
     uint64_t i = h % this->size_in_bits;
     this->_bitset[i] = true;
 }
@@ -180,8 +189,11 @@ int KMinValuesCounter::get_real_k() {
     return this->_minimal_values.size();
 }
 
-void KMinValuesCounter::increment(const char *key) {
-    uint64_t h = this->hash(key);
+void KMinValuesCounter::increment(const char *key, int len) {
+    if (len == -1) {
+        len = strlen(key);
+    }
+    uint64_t h = this->hash(key, len);
     if (unlikely((int)this->_minimal_values.size() < this->k)) {
         this->_minimal_values.push(h);
     } else if (unlikely(h < this->_minimal_values.top())) {
@@ -283,8 +295,11 @@ double HyperLogLogCounter::get_alpha() {
     return 0.7213 / (1.0 + 1.079 / double(1 << this->b));
 }
 
-void HyperLogLogCounter::increment(const char *key) {
-    uint64_t h = this->hash(key);
+void HyperLogLogCounter::increment(const char *key, int len) {
+    if (len == -1) {
+        len = strlen(key);
+    }
+    uint64_t h = this->hash(key, len);
     int j = h & this->m_mask;
     uint64_t w = h >> this->b;
     int run_of_ones = count_run_of_ones(w);
@@ -369,11 +384,11 @@ void HyperLogLogCounter::unserialize(Serializer *serializer) {
 
 /******* DummyCounter ********/
 
-DummyCounter::DummyCounter() {
+DummyCounter::DummyCounter(int ignored) {
     this->c = 0;
 }
 
-void DummyCounter::increment(const char *key) {
+void DummyCounter::increment(const char *key, int len) {
     this->c++;
 }
 
@@ -394,7 +409,7 @@ void DummyCounter::merge_from(ICardinalityEstimator *that) {
 }
 
 ICardinalityEstimator* DummyCounter::clone() {
-    return new DummyCounter();
+    return new DummyCounter(0);
 }
 
 void DummyCounter::serialize(Serializer *serializer) {

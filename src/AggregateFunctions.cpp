@@ -15,10 +15,10 @@ using namespace Vertica;
 using namespace std;
 
 #define VARBINARY_MAX 65000
-#define HLL_BITS 15
-#define LPC_BITS (128 * 1024 * 8)
-#define ESTIMATOR_ARG HLL_BITS
-#define EstimatorClass HyperLogLogCounter
+#define HLL_BITS 12
+#define LPC_BITS (32 * 1024 * 8)
+#define ESTIMATOR_ARG LPC_BITS
+#define EstimatorClass DummyCounter
 
 class EstimateCountDistinct : public AggregateFunction
 {
@@ -28,24 +28,24 @@ class EstimateCountDistinct : public AggregateFunction
     void serialize_counter(ICardinalityEstimator *counter, IntermediateAggs &aggs) {
         Serializer ser;
         ser.add_storage(aggs.getStringRef(1).data(), VARBINARY_MAX);
-        ser.add_storage(aggs.getStringRef(2).data(), VARBINARY_MAX);
-        ser.add_storage(aggs.getStringRef(3).data(), VARBINARY_MAX);
+        //ser.add_storage(aggs.getStringRef(2).data(), VARBINARY_MAX);
+        //ser.add_storage(aggs.getStringRef(3).data(), VARBINARY_MAX);
         counter->serialize(&ser);
     }
 
     void unserialize_counter(ICardinalityEstimator *counter, IntermediateAggs &aggs) {
         Serializer ser;
         ser.add_storage(aggs.getStringRef(1).data(), VARBINARY_MAX);
-        ser.add_storage(aggs.getStringRef(2).data(), VARBINARY_MAX);
-        ser.add_storage(aggs.getStringRef(3).data(), VARBINARY_MAX);
+        //ser.add_storage(aggs.getStringRef(2).data(), VARBINARY_MAX);
+        //ser.add_storage(aggs.getStringRef(3).data(), VARBINARY_MAX);
         counter->unserialize(&ser);
     }
 
     void unserialize_counter(ICardinalityEstimator *counter, MultipleIntermediateAggs &aggs) {
         Serializer ser;
         ser.add_storage((char *)aggs.getStringRef(1).data(), VARBINARY_MAX);
-        ser.add_storage((char *)aggs.getStringRef(2).data(), VARBINARY_MAX);
-        ser.add_storage((char *)aggs.getStringRef(3).data(), VARBINARY_MAX);
+        //ser.add_storage((char *)aggs.getStringRef(2).data(), VARBINARY_MAX);
+        //ser.add_storage((char *)aggs.getStringRef(3).data(), VARBINARY_MAX);
         counter->unserialize(&ser);
     }
 
@@ -57,8 +57,8 @@ class EstimateCountDistinct : public AggregateFunction
             estimator_arg = ESTIMATOR_ARG;
             EstimatorClass counter(estimator_arg);
             aggs.getStringRef(1).copy(std::string((size_t)VARBINARY_MAX, ' '));
-            aggs.getStringRef(2).copy(std::string((size_t)VARBINARY_MAX, ' '));
-            aggs.getStringRef(3).copy(std::string((size_t)VARBINARY_MAX, ' '));
+            //aggs.getStringRef(2).copy(std::string((size_t)VARBINARY_MAX, ' '));
+            //aggs.getStringRef(3).copy(std::string((size_t)VARBINARY_MAX, ' '));
             this->serialize_counter(&counter, aggs);
         } catch(exception& e) {
             // Standard exception. Quit.
@@ -71,14 +71,13 @@ class EstimateCountDistinct : public AggregateFunction
                    IntermediateAggs &aggs)
     {
         try {
-            srvInterface.log("aggregate aggregate");
             vint estimator_arg = aggs.getIntRef(0);
             EstimatorClass counter(estimator_arg);
             this->unserialize_counter(&counter, aggs);
 
             do {
                 const VString &input = argReader.getStringRef(0);
-                counter.increment(input.str().c_str());
+                counter.increment(input.data(), input.length());
             } while (argReader.next());
 
             this->serialize_counter(&counter, aggs);
@@ -93,7 +92,6 @@ class EstimateCountDistinct : public AggregateFunction
                          MultipleIntermediateAggs &aggsOther)
     {
         try {
-            srvInterface.log("aggregate combine");
             vint estimator_arg = aggs.getIntRef(0);
             EstimatorClass counter(estimator_arg);
             this->unserialize_counter(&counter, aggs);
@@ -116,7 +114,6 @@ class EstimateCountDistinct : public AggregateFunction
                            IntermediateAggs &aggs)
     {
         try {
-            srvInterface.log("aggregate terminate");
             vint estimator_arg = aggs.getIntRef(0);
             EstimatorClass counter(estimator_arg);
             this->unserialize_counter(&counter, aggs);
@@ -139,8 +136,8 @@ class EstimateCountDistinctFactory : public AggregateFunctionFactory
     {
         intermediateTypeMetaData.addInt("b");
         intermediateTypeMetaData.addVarbinary(VARBINARY_MAX, "storage0");
-        intermediateTypeMetaData.addVarbinary(VARBINARY_MAX, "storage1");
-        intermediateTypeMetaData.addVarbinary(VARBINARY_MAX, "storage2");
+        //intermediateTypeMetaData.addVarbinary(VARBINARY_MAX, "storage1");
+        //intermediateTypeMetaData.addVarbinary(VARBINARY_MAX, "storage2");
     }
 
     virtual void getPrototype(ServerInterface &srvfloaterface, ColumnTypes &argTypes, ColumnTypes &returnType)

@@ -53,6 +53,15 @@ TEST_MAIN_SOURCES=src/test_main.cpp src/MurmurHash3.cpp src/CardinalityEstimator
 test_main: $(TEST_MAIN_SOURCES) src/Serializer.h
 	$(CXX) -O3 -g -Wall -Werror -o $@ $(TEST_MAIN_SOURCES)
 
+test:
+	vsql -U dbadmin -f uninstall.sql
+	vsql -U dbadmin -f test.sql
+
+install:
+	vsql -U dbadmin -f install.sql
+
+uninstall:
+	vsql -U dbadmin -f install.sql
 
 clean:
 	rm -rf $(TMPDIR)/libcsv-3.0.1
