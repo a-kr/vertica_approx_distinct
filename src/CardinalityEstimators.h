@@ -10,7 +10,7 @@
 class ICardinalityEstimator {
     public:
         virtual ~ICardinalityEstimator() {}
-        virtual void increment(char *key) = 0;
+        virtual void increment(const char *key) = 0;
         virtual int count() = 0;
         virtual std::string repr() = 0;
         virtual void merge_from(ICardinalityEstimator *other) = 0;
@@ -22,7 +22,7 @@ class ICardinalityEstimator {
 
 class HashingCardinalityEstimator: public ICardinalityEstimator {
     protected:
-        uint64_t hash(char *key);
+        uint64_t hash(const char *key);
 };
 
 
@@ -40,7 +40,7 @@ class LinearProbabilisticCounter: public HashingCardinalityEstimator {
     public:
         /* size: number of bits in bitset. Should be on the order of couple millions. The more, the greater counting precision you get */
         LinearProbabilisticCounter(int size);
-        virtual void increment(char *key);
+        virtual void increment(const char *key);
         virtual int count();
         virtual std::string repr();
         virtual void merge_from(ICardinalityEstimator *other);
@@ -61,7 +61,7 @@ class KMinValuesCounter: public HashingCardinalityEstimator {
     public:
         /* k: number of minimal values to store. On the order of couple thousand. The more, the greater counting precision you get */
         KMinValuesCounter(int k);
-        virtual void increment(char *key);
+        virtual void increment(const char *key);
         virtual int count();
         virtual std::string repr();
         virtual void merge_from(ICardinalityEstimator *other);
@@ -86,7 +86,7 @@ class HyperLogLogCounter: public HashingCardinalityEstimator {
     public:
         /* k: number of bits to use as bucket key. In the range of 4..16. The more, the greater counting precision you get */
         HyperLogLogCounter(int b);
-        virtual void increment(char *key);
+        virtual void increment(const char *key);
         virtual int count();
         virtual std::string repr();
         virtual void merge_from(ICardinalityEstimator *other);
@@ -103,7 +103,7 @@ class DummyCounter: public HashingCardinalityEstimator {
         int c;
     public:
         DummyCounter();
-        virtual void increment(char *key);
+        virtual void increment(const char *key);
         virtual int count();
         virtual std::string repr();
         virtual void merge_from(ICardinalityEstimator *other);

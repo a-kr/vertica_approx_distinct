@@ -14,24 +14,52 @@
 using namespace Vertica;
 using namespace std;
 
+#define VARBINARY_MAX 65000
+#define HLL_BITS 15
+#define LPC_BITS (128 * 1024 * 8)
+#define ESTIMATOR_ARG HLL_BITS
+#define EstimatorClass HyperLogLogCounter
 
 class EstimateCountDistinct : public AggregateFunction
 {
 
-    std::vector<int> counters;
-
     public:
-    EstimateCountDistinct(): counters()
-    {
+
+    void serialize_counter(ICardinalityEstimator *counter, IntermediateAggs &aggs) {
+        Serializer ser;
+        ser.add_storage(aggs.getStringRef(1).data(), VARBINARY_MAX);
+        ser.add_storage(aggs.getStringRef(2).data(), VARBINARY_MAX);
+        ser.add_storage(aggs.getStringRef(3).data(), VARBINARY_MAX);
+        counter->serialize(&ser);
+    }
+
+    void unserialize_counter(ICardinalityEstimator *counter, IntermediateAggs &aggs) {
+        Serializer ser;
+        ser.add_storage(aggs.getStringRef(1).data(), VARBINARY_MAX);
+        ser.add_storage(aggs.getStringRef(2).data(), VARBINARY_MAX);
+        ser.add_storage(aggs.getStringRef(3).data(), VARBINARY_MAX);
+        counter->unserialize(&ser);
+    }
+
+    void unserialize_counter(ICardinalityEstimator *counter, MultipleIntermediateAggs &aggs) {
+        Serializer ser;
+        ser.add_storage((char *)aggs.getStringRef(1).data(), VARBINARY_MAX);
+        ser.add_storage((char *)aggs.getStringRef(2).data(), VARBINARY_MAX);
+        ser.add_storage((char *)aggs.getStringRef(3).data(), VARBINARY_MAX);
+        counter->unserialize(&ser);
     }
 
     virtual void initAggregate(ServerInterface &srvInterface, IntermediateAggs &aggs)
     {
         try {
-            vint &my_state = aggs.getIntRef(0);
-            this->counters.push_back(0);
-            my_state = this->counters.size() - 1;
-            my_state = 0;
+            srvInterface.log("aggregate init");
+            vint &estimator_arg = aggs.getIntRef(0);
+            estimator_arg = ESTIMATOR_ARG;
+            EstimatorClass counter(estimator_arg);
+            aggs.getStringRef(1).copy(std::string((size_t)VARBINARY_MAX, ' '));
+            aggs.getStringRef(2).copy(std::string((size_t)VARBINARY_MAX, ' '));
+            aggs.getStringRef(3).copy(std::string((size_t)VARBINARY_MAX, ' '));
+            this->serialize_counter(&counter, aggs);
         } catch(exception& e) {
             // Standard exception. Quit.
             vt_report_error(0, "Exception while initializing intermediate aggregates: [%s]", e.what());
@@ -43,17 +71,17 @@ class EstimateCountDistinct : public AggregateFunction
                    IntermediateAggs &aggs)
     {
         try {
-            vint &my_state = aggs.getIntRef(0);
-            do {
-                //this->cocounter_iunters[counter_i] += 1;
-                my_state += 1;
-                //const VString &input = argReader.getStringRef(0);
+            srvInterface.log("aggregate aggregate");
+            vint estimator_arg = aggs.getIntRef(0);
+            EstimatorClass counter(estimator_arg);
+            this->unserialize_counter(&counter, aggs);
 
-                //if (!input.isNull()) {
-                    //if ((word.length() + input.length()) > maxSize) break;
-                    //word.append(input.str());
-                //}
+            do {
+                const VString &input = argReader.getStringRef(0);
+                counter.increment(input.str().c_str());
             } while (argReader.next());
+
+            this->serialize_counter(&counter, aggs);
         } catch(exception& e) {
             // Standard exception. Quit.
             vt_report_error(0, "Exception while processing aggregate: [%s]", e.what());
@@ -65,14 +93,18 @@ class EstimateCountDistinct : public AggregateFunction
                          MultipleIntermediateAggs &aggsOther)
     {
         try {
-            vint &my_counter_i = aggs.getIntRef(0);
+            srvInterface.log("aggregate combine");
+            vint estimator_arg = aggs.getIntRef(0);
+            EstimatorClass counter(estimator_arg);
+            this->unserialize_counter(&counter, aggs);
 
             do {
-                const vint &other_counter_i = aggsOther.getIntRef(0);
-                //this->counters[my_counter_i] += this->counters[other_counter_i];
-                //this->counters[other_counter_i] = 0;
-                my_counter_i += other_counter_i;
+                EstimatorClass other_counter(estimator_arg);
+                this->unserialize_counter(&counter, aggsOther);
+                counter.merge_from(&other_counter);
             } while (aggsOther.next());
+
+            this->serialize_counter(&counter, aggs);
         } catch(exception& e) {
             // Standard exception. Quit.
             vt_report_error(0, "Exception while combining intermediate aggregates: [%s]", e.what());
@@ -84,8 +116,13 @@ class EstimateCountDistinct : public AggregateFunction
                            IntermediateAggs &aggs)
     {
         try {
-            vint &my_result = aggs.getIntRef(0);
-            resWriter.setInt(my_result);
+            srvInterface.log("aggregate terminate");
+            vint estimator_arg = aggs.getIntRef(0);
+            EstimatorClass counter(estimator_arg);
+            this->unserialize_counter(&counter, aggs);
+
+            int count = counter.count();
+            resWriter.setInt(count);
         } catch(exception& e) {
             // Standard exception. Quit.
             vt_report_error(0, "Exception while computing aggregate output: [%s]", e.what());
@@ -100,7 +137,10 @@ class EstimateCountDistinctFactory : public AggregateFunctionFactory
 {
     virtual void getIntermediateTypes(ServerInterface &srvInterface, const SizedColumnTypes &inputTypes, SizedColumnTypes &intermediateTypeMetaData)
     {
-        intermediateTypeMetaData.addInt("est_count");
+        intermediateTypeMetaData.addInt("b");
+        intermediateTypeMetaData.addVarbinary(VARBINARY_MAX, "storage0");
+        intermediateTypeMetaData.addVarbinary(VARBINARY_MAX, "storage1");
+        intermediateTypeMetaData.addVarbinary(VARBINARY_MAX, "storage2");
     }
 
     virtual void getPrototype(ServerInterface &srvfloaterface, ColumnTypes &argTypes, ColumnTypes &returnType)

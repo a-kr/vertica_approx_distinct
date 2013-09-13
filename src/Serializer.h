@@ -37,7 +37,7 @@ class Serializer {
             this->storage_pos = 0;
         }
 
-        ~Serializer() {
+        void free_containers() {
             while (!this->storage.empty()) {
                 char *data = this->storage.back();
                 delete data;

@@ -30,6 +30,8 @@ void serializer_test() {
         uint64_t r = ser.read_uint64_t();
         printf("%lu\t%lu\n", ref_array[i], r);
     }
+
+    ser.free_containers();
 }
 
 void merging_test(ICardinalityEstimator *base_counter) {
@@ -68,6 +70,7 @@ void merging_test(ICardinalityEstimator *base_counter) {
         ser.reset();
         new_counter->unserialize(&ser);
         counters[i] = new_counter;
+        ser.free_containers();
     }
 
     for (i = 1; i < num_counters; i++) {
@@ -83,7 +86,7 @@ void merging_test(ICardinalityEstimator *base_counter) {
 
 
 void benchmark() {
-    int n_elements = 10000000;
+    int n_elements = 50000000;
     char buf[50];
     int i;
     struct timeval t0, t1;

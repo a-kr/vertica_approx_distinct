@@ -10,7 +10,7 @@
 SDK_HOME?=/opt/vertica/sdk
 
 CXX=g++
-CXXFLAGS=-I $(SDK_HOME)/include -g -Wall -Wno-unused-value -shared -fPIC 
+CXXFLAGS=-I $(SDK_HOME)/include -g -Wall -Wno-unused-value -shared -fPIC -rdynamic -O3
 CXX_ADDL_FLAGS= 
 
 ifdef OPTIMIZE
@@ -45,7 +45,7 @@ AggregateFunctions: $(BUILD_DIR)/CardinalityEstimators.so
 
 FUNC_LIB_SOURCES=src/AggregateFunctions.cpp src/MurmurHash3.cpp src/CardinalityEstimators.cpp
 
-$(BUILD_DIR)/CardinalityEstimators.so: $(FUNC_LIB_SOURCES) $(SDK_HOME)/include/Vertica.cpp $(SDK_HOME)/include/BuildInfo.h $(BUILD_DIR)/.exists
+$(BUILD_DIR)/CardinalityEstimators.so: $(FUNC_LIB_SOURCES) $(SDK_HOME)/include/Vertica.cpp $(SDK_HOME)/include/BuildInfo.h $(BUILD_DIR)/.exists src/Serializer.h
 	$(CXX) $(CXXFLAGS) $(CXX_ADDL_FLAGS) -o $@ $(FUNC_LIB_SOURCES) $(SDK_HOME)/include/Vertica.cpp
 
 TEST_MAIN_SOURCES=src/test_main.cpp src/MurmurHash3.cpp src/CardinalityEstimators.cpp

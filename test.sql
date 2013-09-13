@@ -17,7 +17,7 @@ COPY T FROM STDIN DELIMITER ',';
 3,7.5,'B'
 \.
 
-SELECT x, estimate_count_distinct(z) as average
+SELECT x, sum(y), count(z), estimate_count_distinct(z) as est_count
 FROM T
 GROUP BY x;
 

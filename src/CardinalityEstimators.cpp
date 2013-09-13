@@ -73,7 +73,7 @@ inline int count_run_of_ones(uint64_t val) {
 
 /******** HashingCardinalityEstimator ********/
 
-uint64_t HashingCardinalityEstimator::hash(char *key) {
+uint64_t HashingCardinalityEstimator::hash(const char *key) {
     int key_len = strlen(key);
     uint64_t h[2];
     MurmurHash3_x64_128(key, key_len, 0, &h[0]);
@@ -86,7 +86,7 @@ LinearProbabilisticCounter::LinearProbabilisticCounter(int size): _bitset(size, 
     this->size_in_bits = size;
 }
 
-void LinearProbabilisticCounter::increment(char *key) {
+void LinearProbabilisticCounter::increment(const char *key) {
     uint64_t h = this->hash(key);
     uint64_t i = h % this->size_in_bits;
     this->_bitset[i] = true;
@@ -180,7 +180,7 @@ int KMinValuesCounter::get_real_k() {
     return this->_minimal_values.size();
 }
 
-void KMinValuesCounter::increment(char *key) {
+void KMinValuesCounter::increment(const char *key) {
     uint64_t h = this->hash(key);
     if (unlikely((int)this->_minimal_values.size() < this->k)) {
         this->_minimal_values.push(h);
@@ -283,7 +283,7 @@ double HyperLogLogCounter::get_alpha() {
     return 0.7213 / (1.0 + 1.079 / double(1 << this->b));
 }
 
-void HyperLogLogCounter::increment(char *key) {
+void HyperLogLogCounter::increment(const char *key) {
     uint64_t h = this->hash(key);
     int j = h & this->m_mask;
     uint64_t w = h >> this->b;
@@ -373,7 +373,7 @@ DummyCounter::DummyCounter() {
     this->c = 0;
 }
 
-void DummyCounter::increment(char *key) {
+void DummyCounter::increment(const char *key) {
     this->c++;
 }
 
