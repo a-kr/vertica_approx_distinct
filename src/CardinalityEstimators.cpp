@@ -391,9 +391,9 @@ HyperLogLogOwnArrayCounter::HyperLogLogOwnArrayCounter(int b, char *storage_regi
     this->m_mask = this->m - 1; // 'b' ones
 
     if (storage_region) {
-        this->buckets = (int *)storage_region;
+        this->buckets = (uint32_t *)storage_region;
     } else {
-        this->buckets = new int[this->m];
+        this->buckets = new uint32_t[this->m];
         this->own_buckets_memory = true;
         for (int i = 0; i < this->m; i++) {
             this->buckets[i] = 0;
@@ -425,7 +425,7 @@ void HyperLogLogOwnArrayCounter::increment(const char *key, int len) {
     uint64_t h = this->hash(key, len);
     int j = h & this->m_mask;
     uint64_t w = h >> this->b;
-    int run_of_ones = count_run_of_ones(w);
+    uint32_t run_of_ones = (uint32_t)count_run_of_ones(w);
     this->buckets[j] = (run_of_ones > this->buckets[j]) ? run_of_ones : this->buckets[j];
 }
 
@@ -435,7 +435,7 @@ int HyperLogLogOwnArrayCounter::count() {
     double sum = 0.0;
     int i;
     for (i = 0; i < this->m; i++) {
-        sum += pow(2, -this->buckets[i]);
+        sum += pow(2, -(double)this->buckets[i]);
     }
     estimate = estimate * 1.0 / sum;
 
@@ -465,7 +465,7 @@ int HyperLogLogOwnArrayCounter::number_of_zero_buckets() {
 
 std::string HyperLogLogOwnArrayCounter::repr() {
     char buf[100];
-    int memory = sizeof(int) * this->m;
+    int memory = sizeof(this->buckets[0]) * this->m;
     sprintf(buf, "HyperLogLogOwnArrayCounter(b=%d, m=%d, %s bytes)", this->b, this->m, human_readable_size(memory).c_str());
     return std::string(buf);
 }
@@ -477,8 +477,8 @@ void HyperLogLogOwnArrayCounter::merge_from(ICardinalityEstimator *that) {
     }
     int i;
     for (i = 0; i < this->m; i++) {
-        int my_v = this->buckets[i];
-        int his_v = other->buckets[i];
+        uint32_t my_v = this->buckets[i];
+        uint32_t his_v = other->buckets[i];
         this->buckets[i] = (my_v > his_v) ? my_v : his_v;
     }
 }
@@ -492,7 +492,7 @@ void HyperLogLogOwnArrayCounter::serialize(Serializer *serializer) {
     serializer->write_int(this->m);
     serializer->write_int(this->m_mask);
     for (int i = 0; i < this->m; i++) {
-        serializer->write_int(this->buckets[i]);
+        serializer->write_uint32_t(this->buckets[i]);
     }
 }
 
@@ -502,7 +502,7 @@ void HyperLogLogOwnArrayCounter::unserialize(Serializer *serializer) {
     this->m_mask = serializer->read_int();
     //this->buckets.resize(this->m);
     for (int i = 0; i < this->m; i++) {
-        int v = serializer->read_int();
+        uint32_t v = serializer->read_uint32_t();
         this->buckets[i] = v;
     }
 }

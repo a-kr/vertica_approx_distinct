@@ -98,7 +98,7 @@ class HyperLogLogCounter: public HashingCardinalityEstimator {
 
 class HyperLogLogOwnArrayCounter: public HashingCardinalityEstimator {
     protected:
-        int *buckets;
+        uint32_t *buckets;
         bool own_buckets_memory;
         int b;
         int m;

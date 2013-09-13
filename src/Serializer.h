@@ -111,6 +111,10 @@ class Serializer {
             this->write((char *)&x, (size_t)sizeof(uint64_t));
         }
 
+        void write_uint32_t(uint32_t x) {
+            this->write((char *)&x, (size_t)sizeof(uint32_t));
+        }
+
         int read_int() {
             int r;
             this->read((char *)&r, (size_t)sizeof(int));
@@ -120,6 +124,12 @@ class Serializer {
         uint64_t read_uint64_t() {
             uint64_t r;
             this->read((char *)&r, (size_t)sizeof(uint64_t));
+            return r;
+        }
+
+        uint32_t read_uint32_t() {
+            uint32_t r;
+            this->read((char *)&r, (size_t)sizeof(uint32_t));
             return r;
         }
 };
