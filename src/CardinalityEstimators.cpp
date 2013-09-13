@@ -382,6 +382,131 @@ void HyperLogLogCounter::unserialize(Serializer *serializer) {
     }
 }
 
+/******* HyperLogLogOwnArrayCounter ********/
+
+HyperLogLogOwnArrayCounter::HyperLogLogOwnArrayCounter(int b, char *storage_region) {
+    this->own_buckets_memory = false;
+    this->b = b;
+    this->m = int(pow(2, constrain_int(b, 4, HYPER_LOG_LOG_B_MAX)));
+    this->m_mask = this->m - 1; // 'b' ones
+
+    if (storage_region) {
+        this->buckets = (int *)storage_region;
+    } else {
+        this->buckets = new int[this->m];
+        this->own_buckets_memory = true;
+        for (int i = 0; i < this->m; i++) {
+            this->buckets[i] = 0;
+        }
+    }
+}
+
+HyperLogLogOwnArrayCounter::~HyperLogLogOwnArrayCounter() {
+    if (this->own_buckets_memory) {
+        delete this->buckets;
+        this->buckets = NULL;
+    }
+}
+
+double HyperLogLogOwnArrayCounter::get_alpha() {
+    switch (this->b) {
+        case 4: return 0.673;
+        case 5: return 0.697;
+        case 6: return 0.709;
+    }
+    return 0.7213 / (1.0 + 1.079 / double(1 << this->b));
+}
+
+/* TODO: move to HLL base class */
+void HyperLogLogOwnArrayCounter::increment(const char *key, int len) {
+    if (len == -1) {
+        len = strlen(key);
+    }
+    uint64_t h = this->hash(key, len);
+    int j = h & this->m_mask;
+    uint64_t w = h >> this->b;
+    int run_of_ones = count_run_of_ones(w);
+    this->buckets[j] = (run_of_ones > this->buckets[j]) ? run_of_ones : this->buckets[j];
+}
+
+int HyperLogLogOwnArrayCounter::count() {
+    /* DV_est = alpha * m^2 * 1/sum( 2^ -register ) */
+    double estimate = this->get_alpha() * this->m * this->m;
+    double sum = 0.0;
+    int i;
+    for (i = 0; i < this->m; i++) {
+        sum += pow(2, -this->buckets[i]);
+    }
+    estimate = estimate * 1.0 / sum;
+
+    if (estimate < 2.5 * this->m) {
+        // small range correction
+        int v = this->number_of_zero_buckets();
+        if (v > 0) {
+            estimate = this->m * log(this->m / double(v));
+        }
+    } else if (estimate > 1/30.0 * pow(2, 64)) {
+        // large range correction (for hash collisions)
+        // And we use a 64-bit hash...
+        estimate = -pow(2, 64) * log(1.0 - estimate / pow(2, 64));
+    }
+    return estimate;
+}
+
+int HyperLogLogOwnArrayCounter::number_of_zero_buckets() {
+    int i, count = 0;
+    for (i = 0; i < this->m; i++) {
+        if (this->buckets[i] == 0) {
+            count++;
+        }
+    }
+    return count;
+}
+
+std::string HyperLogLogOwnArrayCounter::repr() {
+    char buf[100];
+    int memory = sizeof(int) * this->m;
+    sprintf(buf, "HyperLogLogOwnArrayCounter(b=%d, m=%d, %s bytes)", this->b, this->m, human_readable_size(memory).c_str());
+    return std::string(buf);
+}
+
+void HyperLogLogOwnArrayCounter::merge_from(ICardinalityEstimator *that) {
+    HyperLogLogOwnArrayCounter *other = (HyperLogLogOwnArrayCounter *)that;
+    if (this->m != other->m) {
+        throw std::runtime_error("cannot merge HyperLogLogOwnArrayCounter with different parameters");
+    }
+    int i;
+    for (i = 0; i < this->m; i++) {
+        int my_v = this->buckets[i];
+        int his_v = other->buckets[i];
+        this->buckets[i] = (my_v > his_v) ? my_v : his_v;
+    }
+}
+
+ICardinalityEstimator* HyperLogLogOwnArrayCounter::clone() {
+    return new HyperLogLogOwnArrayCounter(this->b, NULL);
+}
+
+void HyperLogLogOwnArrayCounter::serialize(Serializer *serializer) {
+    serializer->write_int(this->b);
+    serializer->write_int(this->m);
+    serializer->write_int(this->m_mask);
+    for (int i = 0; i < this->m; i++) {
+        serializer->write_int(this->buckets[i]);
+    }
+}
+
+void HyperLogLogOwnArrayCounter::unserialize(Serializer *serializer) {
+    this->b = serializer->read_int();
+    this->m = serializer->read_int();
+    this->m_mask = serializer->read_int();
+    //this->buckets.resize(this->m);
+    for (int i = 0; i < this->m; i++) {
+        int v = serializer->read_int();
+        this->buckets[i] = v;
+    }
+}
+
 /******* DummyCounter ********/
 
 DummyCounter::DummyCounter(int ignored) {

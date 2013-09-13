@@ -16,9 +16,9 @@ using namespace std;
 
 #define VARBINARY_MAX 65000
 #define HLL_BITS 12
-#define LPC_BITS (32 * 1024 * 8)
-#define ESTIMATOR_ARG LPC_BITS
-#define EstimatorClass DummyCounter
+#define LPC_BITS (63 * 1024 * 8)
+#define ESTIMATOR_ARG HLL_BITS
+#define EstimatorClass HyperLogLogOwnArrayCounter
 
 class EstimateCountDistinct : public AggregateFunction
 {
@@ -55,11 +55,11 @@ class EstimateCountDistinct : public AggregateFunction
             srvInterface.log("aggregate init");
             vint &estimator_arg = aggs.getIntRef(0);
             estimator_arg = ESTIMATOR_ARG;
-            EstimatorClass counter(estimator_arg);
-            aggs.getStringRef(1).copy(std::string((size_t)VARBINARY_MAX, ' '));
+            aggs.getStringRef(1).copy(std::string((size_t)VARBINARY_MAX, '\0'));
+            EstimatorClass counter(estimator_arg, aggs.getStringRef(1).data());
             //aggs.getStringRef(2).copy(std::string((size_t)VARBINARY_MAX, ' '));
             //aggs.getStringRef(3).copy(std::string((size_t)VARBINARY_MAX, ' '));
-            this->serialize_counter(&counter, aggs);
+            //this->serialize_counter(&counter, aggs);
         } catch(exception& e) {
             // Standard exception. Quit.
             vt_report_error(0, "Exception while initializing intermediate aggregates: [%s]", e.what());
@@ -72,15 +72,16 @@ class EstimateCountDistinct : public AggregateFunction
     {
         try {
             vint estimator_arg = aggs.getIntRef(0);
-            EstimatorClass counter(estimator_arg);
-            this->unserialize_counter(&counter, aggs);
+            //EstimatorClass counter(estimator_arg);
+            EstimatorClass counter(estimator_arg, aggs.getStringRef(1).data());
+            //this->unserialize_counter(&counter, aggs);
 
             do {
                 const VString &input = argReader.getStringRef(0);
                 counter.increment(input.data(), input.length());
             } while (argReader.next());
 
-            this->serialize_counter(&counter, aggs);
+            //this->serialize_counter(&counter, aggs);
         } catch(exception& e) {
             // Standard exception. Quit.
             vt_report_error(0, "Exception while processing aggregate: [%s]", e.what());
@@ -93,16 +94,18 @@ class EstimateCountDistinct : public AggregateFunction
     {
         try {
             vint estimator_arg = aggs.getIntRef(0);
-            EstimatorClass counter(estimator_arg);
-            this->unserialize_counter(&counter, aggs);
+            EstimatorClass counter(estimator_arg, aggs.getStringRef(1).data());
+            //EstimatorClass counter(estimator_arg);
+            //this->unserialize_counter(&counter, aggs);
 
             do {
-                EstimatorClass other_counter(estimator_arg);
-                this->unserialize_counter(&counter, aggsOther);
+                //EstimatorClass other_counter(estimator_arg);
+                EstimatorClass other_counter(estimator_arg, (char *)aggsOther.getStringRef(1).data());
+                //this->unserialize_counter(&other_counter, aggsOther);
                 counter.merge_from(&other_counter);
             } while (aggsOther.next());
 
-            this->serialize_counter(&counter, aggs);
+            //this->serialize_counter(&counter, aggs);
         } catch(exception& e) {
             // Standard exception. Quit.
             vt_report_error(0, "Exception while combining intermediate aggregates: [%s]", e.what());
@@ -115,8 +118,9 @@ class EstimateCountDistinct : public AggregateFunction
     {
         try {
             vint estimator_arg = aggs.getIntRef(0);
-            EstimatorClass counter(estimator_arg);
-            this->unserialize_counter(&counter, aggs);
+            EstimatorClass counter(estimator_arg, aggs.getStringRef(1).data());
+            //EstimatorClass counter(estimator_arg);
+            //this->unserialize_counter(&counter, aggs);
 
             int count = counter.count();
             resWriter.setInt(count);

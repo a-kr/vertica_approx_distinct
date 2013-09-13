@@ -96,6 +96,7 @@ void benchmark() {
     counters.push_back(new LinearProbabilisticCounter(128 * 1024 * 8));
     counters.push_back(new KMinValuesCounter(16 * 1024));
     counters.push_back(new HyperLogLogCounter(15));
+    counters.push_back(new HyperLogLogOwnArrayCounter(15, NULL));
     counters.push_back(new DummyCounter(0));
 
     printf("Testing with %d elements...\n", n_elements);
@@ -107,6 +108,7 @@ void benchmark() {
             sprintf(buf, "%u", i);
             counter->increment(buf);
         }
+        printf("will count now;\n");
         int count = counter->count();
         gettimeofday(&t1, NULL);
         dt = (t1.tv_sec - t0.tv_sec) + (double(t1.tv_usec - t0.tv_usec) / 1000000.0);

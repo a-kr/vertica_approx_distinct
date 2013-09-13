@@ -96,6 +96,28 @@ class HyperLogLogCounter: public HashingCardinalityEstimator {
         virtual void unserialize(Serializer *serializer);
 };
 
+class HyperLogLogOwnArrayCounter: public HashingCardinalityEstimator {
+    protected:
+        int *buckets;
+        bool own_buckets_memory;
+        int b;
+        int m;
+        int m_mask;
+        double get_alpha();
+        int number_of_zero_buckets();
+    public:
+        /* k: number of bits to use as bucket key. In the range of 4..16. The more, the greater counting precision you get */
+        HyperLogLogOwnArrayCounter(int b, char *storage_region);
+        virtual ~HyperLogLogOwnArrayCounter();
+        virtual void increment(const char *key, int len=-1);
+        virtual int count();
+        virtual std::string repr();
+        virtual void merge_from(ICardinalityEstimator *other);
+        virtual ICardinalityEstimator* clone();
+        virtual void serialize(Serializer *serializer);
+        virtual void unserialize(Serializer *serializer);
+};
+
 /* Dummy estimator
  *
  */

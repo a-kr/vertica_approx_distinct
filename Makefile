@@ -51,7 +51,7 @@ $(BUILD_DIR)/CardinalityEstimators.so: $(FUNC_LIB_SOURCES) $(SDK_HOME)/include/V
 TEST_MAIN_SOURCES=src/test_main.cpp src/MurmurHash3.cpp src/CardinalityEstimators.cpp
 
 test_main: $(TEST_MAIN_SOURCES) src/Serializer.h
-	$(CXX) -O3 -g -Wall -Werror -o $@ $(TEST_MAIN_SOURCES)
+	$(CXX) -O3 -g -Wall -Werror -rdynamic -o $@ $(TEST_MAIN_SOURCES)
 
 test:
 	vsql -U dbadmin -f uninstall.sql
