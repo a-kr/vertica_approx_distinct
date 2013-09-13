@@ -1,1 +1,1 @@
-DROP LIBRARY MyAggregateFunctions CASCADE;
+DROP LIBRARY CardinalityEstimators CASCADE;

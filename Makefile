@@ -41,11 +41,11 @@ $(BUILD_DIR)/.exists:
 ###
 # Aggregate Functions
 ###
-AggregateFunctions: $(BUILD_DIR)/AggregateFunctions.so
+AggregateFunctions: $(BUILD_DIR)/CardinalityEstimators.so
 
-FUNC_LIB_SOURCES=src/EstimateCountDistinct.cpp src/MurmurHash3.cpp src/CardinalityEstimators.cpp
+FUNC_LIB_SOURCES=src/AggregateFunctions.cpp src/MurmurHash3.cpp src/CardinalityEstimators.cpp
 
-$(BUILD_DIR)/AggregateFunctions.so: $(FUNC_LIB_SOURCES) $(SDK_HOME)/include/Vertica.cpp $(SDK_HOME)/include/BuildInfo.h $(BUILD_DIR)/.exists
+$(BUILD_DIR)/CardinalityEstimators.so: $(FUNC_LIB_SOURCES) $(SDK_HOME)/include/Vertica.cpp $(SDK_HOME)/include/BuildInfo.h $(BUILD_DIR)/.exists
 	$(CXX) $(CXXFLAGS) $(CXX_ADDL_FLAGS) -o $@ $(FUNC_LIB_SOURCES) $(SDK_HOME)/include/Vertica.cpp
 
 TEST_MAIN_SOURCES=src/test_main.cpp src/MurmurHash3.cpp src/CardinalityEstimators.cpp

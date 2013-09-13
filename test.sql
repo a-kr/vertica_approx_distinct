@@ -1,7 +1,7 @@
-\set libfile '\''`pwd`'/build/AggregateFunctions.so\'';
-CREATE LIBRARY AggregateFunctions AS :libfile;
+\set libfile '\''`pwd`'/build/CardinalityEstimators.so\'';
+CREATE LIBRARY CardinalityEstimators AS :libfile;
 CREATE AGGREGATE FUNCTION estimate_count_distinct AS LANGUAGE 'C++'
-NAME 'EstimateCountDistinctFactory' LIBRARY AggregateFunctions;
+NAME 'EstimateCountDistinctFactory' LIBRARY CardinalityEstimators;
 
 CREATE TABLE T (x INTEGER, y NUMERIC(5,2), z VARCHAR(10));
 COPY T FROM STDIN DELIMITER ',';
@@ -22,4 +22,4 @@ FROM T
 GROUP BY x;
 
 DROP TABLE T;
-DROP LIBRARY AggregateFunctions CASCADE;
+DROP LIBRARY CardinalityEstimators CASCADE;
