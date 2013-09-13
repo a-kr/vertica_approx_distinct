@@ -159,10 +159,12 @@ std::string KMinValuesCounter::repr() {
 
 /******* HyperLogLogCounter ********/
 
+#define HYPER_LOG_LOG_B_MAX 20
+
 HyperLogLogCounter::HyperLogLogCounter(int b): buckets(
-        int(pow(2, constrain_int(b, 4, 16))), 0) {
+        int(pow(2, constrain_int(b, 4, HYPER_LOG_LOG_B_MAX))), 0) {
     this->b = b;
-    this->m = int(pow(2, constrain_int(b, 4, 16)));
+    this->m = int(pow(2, constrain_int(b, 4, HYPER_LOG_LOG_B_MAX)));
     this->m_mask = this->m - 1; // 'b' ones
 }
 

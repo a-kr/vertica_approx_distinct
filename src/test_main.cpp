@@ -8,16 +8,23 @@ void test(int n_elements) {
     int i, c;
     std::vector<ICardinalityEstimator*> counters;
 
-    //counters.push_back(new LinearProbabilisticCounter(16 * 1024 * 8));
+    counters.push_back(new LinearProbabilisticCounter(16 * 1024 * 8));
+    counters.push_back(new LinearProbabilisticCounter(32 * 1024 * 8));
+    counters.push_back(new LinearProbabilisticCounter(64 * 1024 * 8));
+    counters.push_back(new LinearProbabilisticCounter(128 * 1024 * 8));
     counters.push_back(new LinearProbabilisticCounter(256 * 1024 * 8));
     counters.push_back(new LinearProbabilisticCounter(1 * 1024 * 1024 * 8));
     //counters.push_back(new LinearProbabilisticCounter(4 * 1024 * 1024 * 8));
     //counters.push_back(new KMinValuesCounter(128));
     //counters.push_back(new KMinValuesCounter(256));
-    counters.push_back(new KMinValuesCounter(1024));
-    //counters.push_back(new HyperLogLogCounter(8));
+    //counters.push_back(new KMinValuesCounter(1024));
+    //counters.push_back(new HyperLogLogCounter(6));
     counters.push_back(new HyperLogLogCounter(12));
+    counters.push_back(new HyperLogLogCounter(13));
+    counters.push_back(new HyperLogLogCounter(14));
+    counters.push_back(new HyperLogLogCounter(15));
     counters.push_back(new HyperLogLogCounter(16));
+    counters.push_back(new HyperLogLogCounter(18));
 
     printf("Testing with %d elements...\n", n_elements);
 
