@@ -57,11 +57,8 @@ class MinHeapComparator {
  */
 class KMinValuesCounter: public HashingCardinalityEstimator {
     protected:
-        std::vector<uint64_t> _minimal_values;
-        int _max_of_min_i;
-        int _values_stored;
-        uint64_t _max_of_min;
-        void save_value_and_recalculate_max(uint64_t value);
+        std::priority_queue<uint64_t> _minimal_values;
+        int get_real_k();
         int k;
     public:
         /* k: number of minimal values to store. On the order of couple hundred. The more, the greater counting precision you get */

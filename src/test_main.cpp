@@ -44,9 +44,9 @@ void benchmark() {
     double dt;
     std::vector<ICardinalityEstimator*> counters;
 
-    counters.push_back(new LinearProbabilisticCounter(64 * 1024 * 8));
-    counters.push_back(new LinearProbabilisticCounter(256 * 1024 * 8));
-    counters.push_back(new HyperLogLogCounter(16));
+    counters.push_back(new LinearProbabilisticCounter(128 * 1024 * 8));
+    counters.push_back(new KMinValuesCounter(16 * 1024));
+    counters.push_back(new HyperLogLogCounter(15));
     counters.push_back(new DummyCounter());
 
     printf("Testing with %d elements...\n", n_elements);
@@ -124,10 +124,9 @@ void count_stdin(ICardinalityEstimator *counter) {
 int main(int argc, char **argv) {
     int size = 0;
 
-    merging_test(new LinearProbabilisticCounter(128 * 1024 * 8));
-    merging_test(new KMinValuesCounter(1024));
-    merging_test(new HyperLogLogCounter(16));
-    return 0;
+    //merging_test(new LinearProbabilisticCounter(128 * 1024 * 8));
+    //merging_test(new KMinValuesCounter(1024));
+    //merging_test(new HyperLogLogCounter(16));
 
     benchmark();
     return 0;

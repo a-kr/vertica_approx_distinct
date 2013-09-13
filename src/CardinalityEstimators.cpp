@@ -1,6 +1,7 @@
 #include <vector>
 #include <algorithm>
 #include <stdexcept>
+#include <queue>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -13,6 +14,9 @@
 /******** Utilities *******/
 
 #define UINT64_MAX (18446744073709551615ULL)
+
+#define likely(x)       __builtin_expect(!!(x), 1)
+#define unlikely(x)     __builtin_expect(!!(x), 0)
 
 std::string human_readable_size(int bytes) {
     char buf[20];
@@ -118,40 +122,26 @@ ICardinalityEstimator* LinearProbabilisticCounter::clone() {
 
 /******* KMinValuesCounter ********/
 
-KMinValuesCounter::KMinValuesCounter(int k): _minimal_values(k, 0) {
+KMinValuesCounter::KMinValuesCounter(int k) : _minimal_values() {
     this->k = k;
-    this->_max_of_min_i = 0;
-    this->_max_of_min = UINT64_MAX;
-    this->_values_stored = 0;
 }
 
-void KMinValuesCounter::save_value_and_recalculate_max(uint64_t newval) {
-    int i;
-    uint64_t max = 0;
-    uint64_t max_i = 0;
-    if (this->_values_stored < this->k) {
-        // there are still free places, put new value there
-        // instead of replacing an old one
-        this->_minimal_values[this->_values_stored++] = newval;
-    } else {
-        // replace an old value
-        this->_minimal_values[this->_max_of_min_i] = newval;
+int KMinValuesCounter::get_real_k() {
+    if ((int)this->_minimal_values.size() < this->k) {
+        return this->k;
     }
-    // recompute index of the new maximum
-    for (i = 0; i < this->k; i++) {
-        if (this->_minimal_values[i] > max) {
-            max = this->_minimal_values[i];
-            max_i = i;
-        }
-    }
-    this->_max_of_min_i = max_i;
-    this->_max_of_min = max;
+    return this->_minimal_values.size();
 }
 
 void KMinValuesCounter::increment(char *key) {
     uint64_t h = this->hash(key);
-    if (h < this->_max_of_min) {
-        this->save_value_and_recalculate_max(h);
+    if (unlikely((int)this->_minimal_values.size() < this->k)) {
+        this->_minimal_values.push(h);
+    } else if (unlikely(h < this->_minimal_values.top())) {
+        if (likely((int)this->_minimal_values.size() == this->k)) {
+            this->_minimal_values.pop();
+        this->_minimal_values.push(h);
+        }
     }
 }
 
@@ -159,11 +149,11 @@ int KMinValuesCounter::count() {
     /* (k - 1) / kth_min_normalized  */
     /* == (k - 1) / (kth_min / UINT64_MAX)  */
     /* == UINT64_MAX * (k - 1) / kth_min  */
-    int k = this->k;
-    if (this->_values_stored < k) {
-        k = this->_values_stored;
+    int k = this->get_real_k();
+    if (k == 0) {
+        return 0;
     }
-    return int(UINT64_MAX * double(k - 1) / double(this->_max_of_min));
+    return int(UINT64_MAX * double(k - 1) / double(this->_minimal_values.top()));
 }
 
 std::string KMinValuesCounter::repr() {
@@ -173,18 +163,18 @@ std::string KMinValuesCounter::repr() {
     return std::string(buf);
 }
 
+/* Caution: this is a destructive merge, i.e. it empties "that" counter */
 void KMinValuesCounter::merge_from(ICardinalityEstimator *that) {
     KMinValuesCounter *other = (KMinValuesCounter *)that;
-    int i;
     uint64_t v;
-    int other_k = other->k;
-    if (other->_values_stored < other_k) {
-        other_k = other->_values_stored;
-    }
-    for (i = 0; i < other_k; i++) {
-        v = other->_minimal_values[i];
-        if (v < this->_max_of_min) {
-            this->save_value_and_recalculate_max(v);
+    while (!other->_minimal_values.empty()) {
+        v = other->_minimal_values.top();
+        other->_minimal_values.pop();
+        if (v < this->_minimal_values.top()) {
+            if ((int)this->_minimal_values.size() == this->k) {
+                this->_minimal_values.pop();
+            }
+            this->_minimal_values.push(v);
         }
     }
 }
