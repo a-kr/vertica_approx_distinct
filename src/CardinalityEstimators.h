@@ -5,6 +5,7 @@
 #include <string>
 #include <queue>
 #include <stdint.h>
+#include "Serializer.h"
 
 class ICardinalityEstimator {
     public:
@@ -14,6 +15,8 @@ class ICardinalityEstimator {
         virtual std::string repr() = 0;
         virtual void merge_from(ICardinalityEstimator *other) = 0;
         virtual ICardinalityEstimator* clone() = 0;
+        virtual void serialize(Serializer *serializer) = 0;
+        virtual void unserialize(Serializer *serializer) = 0;
 
 };
 
@@ -42,14 +45,8 @@ class LinearProbabilisticCounter: public HashingCardinalityEstimator {
         virtual std::string repr();
         virtual void merge_from(ICardinalityEstimator *other);
         virtual ICardinalityEstimator* clone();
-};
-
-/* A comparator for sorting in ascending order */
-class MinHeapComparator {
-    public:
-        bool operator() (uint64_t a, uint64_t b) {
-            return a > b;
-        }
+        virtual void serialize(Serializer *serializer);
+        virtual void unserialize(Serializer *serializer);
 };
 
 /* K Minimal Values estimator
@@ -62,13 +59,15 @@ class KMinValuesCounter: public HashingCardinalityEstimator {
         int get_real_k();
         int k;
     public:
-        /* k: number of minimal values to store. On the order of couple hundred. The more, the greater counting precision you get */
+        /* k: number of minimal values to store. On the order of couple thousand. The more, the greater counting precision you get */
         KMinValuesCounter(int k);
         virtual void increment(char *key);
         virtual int count();
         virtual std::string repr();
         virtual void merge_from(ICardinalityEstimator *other);
         virtual ICardinalityEstimator* clone();
+        virtual void serialize(Serializer *serializer);
+        virtual void unserialize(Serializer *serializer);
 };
 
 /* HyperLogLog estimator
@@ -92,6 +91,8 @@ class HyperLogLogCounter: public HashingCardinalityEstimator {
         virtual std::string repr();
         virtual void merge_from(ICardinalityEstimator *other);
         virtual ICardinalityEstimator* clone();
+        virtual void serialize(Serializer *serializer);
+        virtual void unserialize(Serializer *serializer);
 };
 
 /* Dummy estimator
@@ -107,6 +108,8 @@ class DummyCounter: public HashingCardinalityEstimator {
         virtual std::string repr();
         virtual void merge_from(ICardinalityEstimator *other);
         virtual ICardinalityEstimator* clone();
+        virtual void serialize(Serializer *serializer);
+        virtual void unserialize(Serializer *serializer);
 };
 
 #endif

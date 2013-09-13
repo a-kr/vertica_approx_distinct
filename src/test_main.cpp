@@ -21,7 +21,7 @@ void serializer_test() {
     ref_array.push_back(2211834);
 
     for (i = 0; i < (int)ref_array.size(); i++) {
-        ser.write(ref_array[i]);
+        ser.write_uint64_t(ref_array[i]);
     }
 
     ser.reset();
@@ -50,6 +50,24 @@ void merging_test(ICardinalityEstimator *base_counter) {
         ICardinalityEstimator *counter = counters[i % num_counters];
         sprintf(buf, "%u", i);
         counter->increment(buf);
+    }
+
+    // serialize all counters and assemble them back to make sure that
+    // serialization works
+    for (i = 0; i < num_counters; i++) {
+        Serializer ser;
+        ser.add_storage(new char[65000], 65000);
+        ser.add_storage(new char[65000], 65000);
+        ser.add_storage(new char[65000], 65000);
+        ser.add_storage(new char[65000], 65000);
+        ser.add_storage(new char[65000], 65000);
+        ICardinalityEstimator *old_counter = counters[i];
+        old_counter->serialize(&ser);
+        ICardinalityEstimator *new_counter = old_counter->clone();
+        delete old_counter;
+        ser.reset();
+        new_counter->unserialize(&ser);
+        counters[i] = new_counter;
     }
 
     for (i = 1; i < num_counters; i++) {
@@ -148,8 +166,8 @@ void count_stdin(ICardinalityEstimator *counter) {
 int main(int argc, char **argv) {
     int size = 0;
 
-    serializer_test();
-    return 0;
+    //serializer_test();
+    //return 0;
 
     merging_test(new LinearProbabilisticCounter(128 * 1024 * 8));
     merging_test(new KMinValuesCounter(16 * 1024));

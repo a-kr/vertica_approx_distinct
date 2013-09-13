@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <stdexcept>
+#include <cstdio>
 
 class Serializer {
     protected:
@@ -13,7 +14,7 @@ class Serializer {
 
         void check_remaining_space_and_switch_container_if_needed(size_t required_space) {
             if (this->storage.size() > 0) {
-                if (this->storage_pos + required_space < this->storage_size[this->storage_pos]) {
+                if (this->storage_pos + required_space < this->storage_size[this->storage_i]) {
                     return;
                 }
                 // not enough space in current container
@@ -24,13 +25,44 @@ class Serializer {
                     return;
                 }
             }
-            throw std::runtime_error("not enough space");
+            char buf[100];
+            sprintf(buf, "Not enough space: size %lu, capacity %lu, requested %lu",
+                    this->size(), this->capacity(), required_space);
+            throw std::runtime_error(buf);
         }
 
     public:
         Serializer(): storage(), storage_size() {
             this->storage_i = 0;
             this->storage_pos = 0;
+        }
+
+        ~Serializer() {
+            while (!this->storage.empty()) {
+                char *data = this->storage.back();
+                delete data;
+                this->storage.pop_back();
+                this->storage_size.pop_back();
+            }
+            this->storage_i = 0;
+            this->storage_pos = 0;
+        }
+
+        size_t size() {
+            size_t s = 0;
+            for (int i = 0; i < (int)this->storage_i; i++) {
+                s += this->storage_size[i];
+            }
+            s += this->storage_pos;
+            return s;
+        }
+
+        size_t capacity() {
+            size_t s = 0;
+            for (int i = 0; i < (int)this->storage.size(); i++) {
+                s += this->storage_size[i];
+            }
+            return s;
         }
 
         void add_storage(char *data, size_t len) {
@@ -50,6 +82,7 @@ class Serializer {
             return true;
         }
 
+        /* Warning: works only if data fits completely in the current storage container. */
         void write(char *data, size_t len) {
             this->check_remaining_space_and_switch_container_if_needed(len);
             size_t i;
@@ -70,12 +103,12 @@ class Serializer {
             this->storage_pos += len;
         }
 
-        void write(int x) {
-            this->write((char *)&x, (size_t)sizeof(x));
+        void write_int(int x) {
+            this->write((char *)&x, (size_t)sizeof(int));
         }
 
-        void write(uint64_t x) {
-            this->write((char *)&x, (size_t)sizeof(x));
+        void write_uint64_t(uint64_t x) {
+            this->write((char *)&x, (size_t)sizeof(uint64_t));
         }
 
         int read_int() {

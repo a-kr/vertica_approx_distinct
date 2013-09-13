@@ -32,6 +32,18 @@ std::string human_readable_size(int bytes) {
     return std::string(buf);
 }
 
+void print_binary(uint64_t n) {
+    int i;
+    for (i = 63; i >= 0; i--) {
+        if (n & (1 << i)) {
+            printf("1");
+        } else {
+            printf("0");
+        }
+    }
+    printf("\n");
+}
+
 int constrain_int(int v, int min, int max) {
     if (v > max) {
         return max;
@@ -120,6 +132,41 @@ ICardinalityEstimator* LinearProbabilisticCounter::clone() {
     return new LinearProbabilisticCounter(this->size_in_bits);
 }
 
+void LinearProbabilisticCounter::serialize(Serializer *serializer) {
+    serializer->write_int(this->size_in_bits);
+    uint64_t bit_buffer = 0;
+    int bb_i = 0;
+    int bit_i;
+    for (bit_i = 0; bit_i < this->size_in_bits; bit_i++) {
+        bit_buffer |= ((uint64_t)this->_bitset[bit_i] << bb_i);
+        bb_i++;
+        if (unlikely(bb_i >= 64)) {
+            serializer->write_uint64_t(bit_buffer);
+            bit_buffer = 0;
+            bb_i = 0;
+        }
+    }
+    if (bb_i > 0) {
+        serializer->write_uint64_t(bit_buffer);
+    }
+}
+
+void LinearProbabilisticCounter::unserialize(Serializer *serializer) {
+    this->size_in_bits = serializer->read_int();
+    this->_bitset.resize(this->size_in_bits, false);
+    uint64_t bit_buffer = 0;
+    int bb_i = 64; // to force read on the first iteration
+    int bit_i = 0;
+    for (bit_i = 0; bit_i < this->size_in_bits; bit_i++) {
+        if (unlikely(bb_i >= 64)) {
+            bit_buffer = serializer->read_uint64_t();
+            bb_i = 0;
+        }
+        this->_bitset[bit_i] = !!(bit_buffer & ((uint64_t)1 << bb_i));
+        bb_i++;
+    }
+}
+
 /******* KMinValuesCounter ********/
 
 KMinValuesCounter::KMinValuesCounter(int k) : _minimal_values() {
@@ -181,6 +228,39 @@ void KMinValuesCounter::merge_from(ICardinalityEstimator *that) {
 
 ICardinalityEstimator* KMinValuesCounter::clone() {
     return new KMinValuesCounter(this->k);
+}
+
+void KMinValuesCounter::serialize(Serializer *serializer) {
+    std::vector<uint64_t> backup_for_queue;
+    serializer->write_int(this->k);
+    serializer->write_int(this->_minimal_values.size());
+
+    while (!this->_minimal_values.empty()) {
+        uint64_t v = this->_minimal_values.top();
+        this->_minimal_values.pop();
+        backup_for_queue.push_back(v);
+        serializer->write_uint64_t(v);
+    }
+
+    while (!backup_for_queue.empty()) {
+        uint64_t v = backup_for_queue.back();
+        backup_for_queue.pop_back();
+        this->_minimal_values.push(v);
+    }
+}
+
+void KMinValuesCounter::unserialize(Serializer *serializer) {
+    this->k = serializer->read_int();
+    int n = serializer->read_int();
+    // strangely enough, priority_queue has no method clear()
+    while (!this->_minimal_values.empty()) {
+        this->_minimal_values.pop();
+    }
+    for (int i = 0; i < n; i++) {
+        uint64_t v = serializer->read_uint64_t();
+        //printf("restoring %lu\n", v);
+        this->_minimal_values.push(v);
+    }
 }
 
 /******* HyperLogLogCounter ********/
@@ -267,6 +347,26 @@ ICardinalityEstimator* HyperLogLogCounter::clone() {
     return new HyperLogLogCounter(this->b);
 }
 
+void HyperLogLogCounter::serialize(Serializer *serializer) {
+    serializer->write_int(this->b);
+    serializer->write_int(this->m);
+    serializer->write_int(this->m_mask);
+    for (int i = 0; i < this->m; i++) {
+        serializer->write_int(this->buckets[i]);
+    }
+}
+
+void HyperLogLogCounter::unserialize(Serializer *serializer) {
+    this->b = serializer->read_int();
+    this->m = serializer->read_int();
+    this->m_mask = serializer->read_int();
+    this->buckets.resize(this->m);
+    for (int i = 0; i < this->m; i++) {
+        int v = serializer->read_int();
+        this->buckets[i] = v;
+    }
+}
+
 /******* DummyCounter ********/
 
 DummyCounter::DummyCounter() {
@@ -295,4 +395,12 @@ void DummyCounter::merge_from(ICardinalityEstimator *that) {
 
 ICardinalityEstimator* DummyCounter::clone() {
     return new DummyCounter();
+}
+
+void DummyCounter::serialize(Serializer *serializer) {
+    serializer->write_int(this->c);
+}
+
+void DummyCounter::unserialize(Serializer *serializer) {
+    this->c = serializer->read_int();
 }
