@@ -3,6 +3,34 @@
 #include <cmath>
 #include <sys/time.h>
 #include "CardinalityEstimators.h"
+#include "Serializer.h"
+
+void serializer_test() {
+    Serializer ser;
+    ser.add_storage(new char[20], 20);
+    ser.add_storage(new char[20], 20);
+    ser.add_storage(new char[20], 20);
+
+    int i;
+    std::vector<uint64_t> ref_array;
+    ref_array.push_back(123413);
+    ref_array.push_back(8374234);
+    ref_array.push_back(947134);
+    ref_array.push_back(2348423);
+    ref_array.push_back(88434);
+    ref_array.push_back(2211834);
+
+    for (i = 0; i < (int)ref_array.size(); i++) {
+        ser.write(ref_array[i]);
+    }
+
+    ser.reset();
+
+    for (i = 0; i < (int)ref_array.size(); i++) {
+        uint64_t r = ser.read_uint64_t();
+        printf("%lu\t%lu\n", ref_array[i], r);
+    }
+}
 
 void merging_test(ICardinalityEstimator *base_counter) {
     int n_elements = 1000000;
@@ -119,6 +147,9 @@ void count_stdin(ICardinalityEstimator *counter) {
 
 int main(int argc, char **argv) {
     int size = 0;
+
+    serializer_test();
+    return 0;
 
     merging_test(new LinearProbabilisticCounter(128 * 1024 * 8));
     merging_test(new KMinValuesCounter(16 * 1024));

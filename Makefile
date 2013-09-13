@@ -50,7 +50,7 @@ $(BUILD_DIR)/AggregateFunctions.so: $(FUNC_LIB_SOURCES) $(SDK_HOME)/include/Vert
 
 TEST_MAIN_SOURCES=src/test_main.cpp src/MurmurHash3.cpp src/CardinalityEstimators.cpp
 
-test_main: $(TEST_MAIN_SOURCES)
+test_main: $(TEST_MAIN_SOURCES) src/Serializer.h
 	$(CXX) -O3 -g -Wall -Werror -o $@ $(TEST_MAIN_SOURCES)
 
 

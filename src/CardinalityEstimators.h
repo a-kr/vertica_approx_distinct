@@ -14,6 +14,7 @@ class ICardinalityEstimator {
         virtual std::string repr() = 0;
         virtual void merge_from(ICardinalityEstimator *other) = 0;
         virtual ICardinalityEstimator* clone() = 0;
+
 };
 
 class HashingCardinalityEstimator: public ICardinalityEstimator {
