@@ -223,3 +223,24 @@ std::string HyperLogLogCounter::repr() {
     sprintf(buf, "HyperLogLogCounter(b=%d, m=%d, %s bytes)", this->b, this->m, human_readable_size(memory).c_str());
     return std::string(buf);
 }
+
+/******* DummyCounter ********/
+
+DummyCounter::DummyCounter() {
+    this->c = 0;
+}
+
+void DummyCounter::increment(char *key) {
+    this->c++;
+}
+
+int DummyCounter::count() {
+    return this->c;
+}
+
+std::string DummyCounter::repr() {
+    char buf[50];
+    int memory = sizeof(int);
+    sprintf(buf, "DummyCounter(%s bytes)", human_readable_size(memory).c_str());
+    return std::string(buf);
+}

@@ -1,7 +1,40 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cmath>
+#include <sys/time.h>
 #include "CardinalityEstimators.h"
+
+void benchmark() {
+    int n_elements = 10000000;
+    char buf[50];
+    int i;
+    struct timeval t0, t1;
+    double dt;
+    std::vector<ICardinalityEstimator*> counters;
+
+    counters.push_back(new LinearProbabilisticCounter(64 * 1024 * 8));
+    counters.push_back(new LinearProbabilisticCounter(256 * 1024 * 8));
+    counters.push_back(new HyperLogLogCounter(16));
+    counters.push_back(new DummyCounter());
+
+    printf("Testing with %d elements...\n", n_elements);
+
+    while (counters.size() > 0) {
+        ICardinalityEstimator *counter = counters.back();
+        gettimeofday(&t0, NULL);
+        for (i = 0; i < n_elements; i++) {
+            sprintf(buf, "%u", i);
+            counter->increment(buf);
+        }
+        int count = counter->count();
+        gettimeofday(&t1, NULL);
+        dt = (t1.tv_sec - t0.tv_sec) + (double(t1.tv_usec - t0.tv_usec) / 1000000.0);
+        double err_percent = 100.0 * abs(double(count) - n_elements) / double(n_elements);
+        printf("%s:\tcount = %d (error = %.2f%%) time = %.3fs\n", counter->repr().c_str(), count, err_percent, dt);
+        delete counter;
+        counters.pop_back();
+    }
+}
 
 void test(int n_elements) {
     char buf[50];
@@ -58,6 +91,9 @@ void count_stdin(ICardinalityEstimator *counter) {
 
 int main(int argc, char **argv) {
     int size = 0;
+
+    benchmark();
+    return 0;
 
     test(100);
     test(1000);

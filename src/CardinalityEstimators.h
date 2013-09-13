@@ -88,4 +88,17 @@ class HyperLogLogCounter: public HashingCardinalityEstimator {
         virtual std::string repr();
 };
 
+/* Dummy estimator
+ *
+ */
+class DummyCounter: public HashingCardinalityEstimator {
+    protected:
+        int c;
+    public:
+        DummyCounter();
+        virtual void increment(char *key);
+        virtual int count();
+        virtual std::string repr();
+};
+
 #endif
