@@ -12,6 +12,8 @@ class ICardinalityEstimator {
         virtual void increment(char *key) = 0;
         virtual int count() = 0;
         virtual std::string repr() = 0;
+        virtual void merge_from(ICardinalityEstimator *other) = 0;
+        virtual ICardinalityEstimator* clone() = 0;
 };
 
 class HashingCardinalityEstimator: public ICardinalityEstimator {
@@ -37,6 +39,8 @@ class LinearProbabilisticCounter: public HashingCardinalityEstimator {
         virtual void increment(char *key);
         virtual int count();
         virtual std::string repr();
+        virtual void merge_from(ICardinalityEstimator *other);
+        virtual ICardinalityEstimator* clone();
 };
 
 /* A comparator for sorting in ascending order */
@@ -65,6 +69,8 @@ class KMinValuesCounter: public HashingCardinalityEstimator {
         virtual void increment(char *key);
         virtual int count();
         virtual std::string repr();
+        virtual void merge_from(ICardinalityEstimator *other);
+        virtual ICardinalityEstimator* clone();
 };
 
 /* HyperLogLog estimator
@@ -86,6 +92,8 @@ class HyperLogLogCounter: public HashingCardinalityEstimator {
         virtual void increment(char *key);
         virtual int count();
         virtual std::string repr();
+        virtual void merge_from(ICardinalityEstimator *other);
+        virtual ICardinalityEstimator* clone();
 };
 
 /* Dummy estimator
@@ -99,6 +107,8 @@ class DummyCounter: public HashingCardinalityEstimator {
         virtual void increment(char *key);
         virtual int count();
         virtual std::string repr();
+        virtual void merge_from(ICardinalityEstimator *other);
+        virtual ICardinalityEstimator* clone();
 };
 
 #endif

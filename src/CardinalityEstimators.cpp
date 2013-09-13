@@ -1,5 +1,6 @@
 #include <vector>
 #include <algorithm>
+#include <stdexcept>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -100,6 +101,21 @@ std::string LinearProbabilisticCounter::repr() {
     return std::string(buf);
 }
 
+void LinearProbabilisticCounter::merge_from(ICardinalityEstimator *that) {
+    LinearProbabilisticCounter *other = (LinearProbabilisticCounter *)that;
+    int i;
+    if (this->size_in_bits != other->size_in_bits) {
+        throw std::runtime_error("cannot merge LinearProbabilisticCounters with different parameters");
+    }
+    for (i = 0; i < this->size_in_bits; i++) {
+        this->_bitset[i] = this->_bitset[i] || other->_bitset[i];
+    }
+}
+
+ICardinalityEstimator* LinearProbabilisticCounter::clone() {
+    return new LinearProbabilisticCounter(this->size_in_bits);
+}
+
 /******* KMinValuesCounter ********/
 
 KMinValuesCounter::KMinValuesCounter(int k): _minimal_values(k, 0) {
@@ -155,6 +171,26 @@ std::string KMinValuesCounter::repr() {
     int memory = sizeof(uint64_t) * this->k;
     sprintf(buf, "KMinValuesCounter(k=%d, %s bytes)", this->k, human_readable_size(memory).c_str());
     return std::string(buf);
+}
+
+void KMinValuesCounter::merge_from(ICardinalityEstimator *that) {
+    KMinValuesCounter *other = (KMinValuesCounter *)that;
+    int i;
+    uint64_t v;
+    int other_k = other->k;
+    if (other->_values_stored < other_k) {
+        other_k = other->_values_stored;
+    }
+    for (i = 0; i < other_k; i++) {
+        v = other->_minimal_values[i];
+        if (v < this->_max_of_min) {
+            this->save_value_and_recalculate_max(v);
+        }
+    }
+}
+
+ICardinalityEstimator* KMinValuesCounter::clone() {
+    return new KMinValuesCounter(this->k);
 }
 
 /******* HyperLogLogCounter ********/
@@ -224,6 +260,23 @@ std::string HyperLogLogCounter::repr() {
     return std::string(buf);
 }
 
+void HyperLogLogCounter::merge_from(ICardinalityEstimator *that) {
+    HyperLogLogCounter *other = (HyperLogLogCounter *)that;
+    if (this->m != other->m) {
+        throw std::runtime_error("cannot merge HyperLogLogCounters with different parameters");
+    }
+    int i;
+    for (i = 0; i < this->m; i++) {
+        int my_v = this->buckets[i];
+        int his_v = other->buckets[i];
+        this->buckets[i] = (my_v > his_v) ? my_v : his_v;
+    }
+}
+
+ICardinalityEstimator* HyperLogLogCounter::clone() {
+    return new HyperLogLogCounter(this->b);
+}
+
 /******* DummyCounter ********/
 
 DummyCounter::DummyCounter() {
@@ -243,4 +296,13 @@ std::string DummyCounter::repr() {
     int memory = sizeof(int);
     sprintf(buf, "DummyCounter(%s bytes)", human_readable_size(memory).c_str());
     return std::string(buf);
+}
+
+void DummyCounter::merge_from(ICardinalityEstimator *that) {
+    DummyCounter *other = (DummyCounter *)that;
+    this->c += other->c;
+}
+
+ICardinalityEstimator* DummyCounter::clone() {
+    return new DummyCounter();
 }

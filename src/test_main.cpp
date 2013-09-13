@@ -4,6 +4,38 @@
 #include <sys/time.h>
 #include "CardinalityEstimators.h"
 
+void merging_test(ICardinalityEstimator *base_counter) {
+    int n_elements = 1000000;
+    char buf[50];
+    int i;
+    int num_counters = 100;
+    std::vector<ICardinalityEstimator*> counters;
+
+    counters.push_back(base_counter);
+    for (i = 1; i < num_counters; i++) {
+        counters.push_back(base_counter->clone());
+    }
+
+    printf("Testing with %d elements...\n", n_elements);
+
+    for (i = 0; i < n_elements; i++) {
+        ICardinalityEstimator *counter = counters[i % num_counters];
+        sprintf(buf, "%u", i);
+        counter->increment(buf);
+    }
+
+    for (i = 1; i < num_counters; i++) {
+        counters[0]->merge_from(counters[i]);
+        delete counters[i];
+    }
+
+    int count = counters[0]->count();
+    double err_percent = 100.0 * abs(double(count) - n_elements) / double(n_elements);
+    printf("%s:\tcount = %d (error = %.2f%%)\n", counters[0]->repr().c_str(), count, err_percent);
+    delete counters[0];
+}
+
+
 void benchmark() {
     int n_elements = 10000000;
     char buf[50];
@@ -91,6 +123,11 @@ void count_stdin(ICardinalityEstimator *counter) {
 
 int main(int argc, char **argv) {
     int size = 0;
+
+    merging_test(new LinearProbabilisticCounter(128 * 1024 * 8));
+    merging_test(new KMinValuesCounter(1024));
+    merging_test(new HyperLogLogCounter(16));
+    return 0;
 
     benchmark();
     return 0;
