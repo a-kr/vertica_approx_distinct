@@ -79,11 +79,7 @@ void test(int n_elements) {
     counters.push_back(new LinearProbabilisticCounter(128 * 1024 * 8));
     counters.push_back(new LinearProbabilisticCounter(256 * 1024 * 8));
     counters.push_back(new LinearProbabilisticCounter(1 * 1024 * 1024 * 8));
-    //counters.push_back(new LinearProbabilisticCounter(4 * 1024 * 1024 * 8));
-    //counters.push_back(new KMinValuesCounter(128));
-    //counters.push_back(new KMinValuesCounter(256));
-    //counters.push_back(new KMinValuesCounter(1024));
-    //counters.push_back(new HyperLogLogCounter(6));
+    counters.push_back(new KMinValuesCounter(16 * 1024));
     counters.push_back(new HyperLogLogCounter(12));
     counters.push_back(new HyperLogLogCounter(13));
     counters.push_back(new HyperLogLogCounter(14));
@@ -124,9 +120,9 @@ void count_stdin(ICardinalityEstimator *counter) {
 int main(int argc, char **argv) {
     int size = 0;
 
-    //merging_test(new LinearProbabilisticCounter(128 * 1024 * 8));
-    //merging_test(new KMinValuesCounter(1024));
-    //merging_test(new HyperLogLogCounter(16));
+    merging_test(new LinearProbabilisticCounter(128 * 1024 * 8));
+    merging_test(new KMinValuesCounter(16 * 1024));
+    merging_test(new HyperLogLogCounter(15));
 
     benchmark();
     return 0;
